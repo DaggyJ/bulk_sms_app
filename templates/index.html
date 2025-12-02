@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bulk SMS Dashboard | Beloved Church Kenya</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-left">
+    <button id="dashboardBtn">Dashboard</button>
+    <button id="adminUploadBtn" style="display:none;">Upload Contacts</button>
+  </div>
+  <div class="navbar-center">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="height:40px;">
+  </div>
+  <div class="navbar-right">
+    <button id="logsBtn">SMS Logs</button>
+    <span id="balance" style="display:none;">Balance: KES 0</span>
+    <button id="loginLogoutBtn">Login</button>
+  </div>
+</nav>
+
+<!-- Login/Register forms -->
+<div id="authContainer"></div>
+
+<!-- Main content -->
+<div class="container">
+  <div class="left-col">
+    <div id="dashboard" class="page"></div>
+    <div id="upload" class="page" style="display:none;"></div>
+
+    <!-- Admin Users Section -->
+    <div id="adminUsersSection" style="display:none; margin-top:20px;">
+      <h2>Users</h2>
+      <table id="usersTable" border="1">
+        <thead>
+          <tr>
+            <th>Pending User</th>
+            <th>Active User</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-container">
+    <div class="footer-left">
+      <address>
+        P.O. BOX 99-50244, AMAGORO<br>
+        Location: Malaba, Kenya<br>
+        OFFICE: +254794434233<br>
+        Email: info@belovedchurchkenya.com
+      </address>
+    </div>
+    <div class="footer-right">
+      <ul class="sns">
+        <li><a href="mailto:info@belovedchurchkenya.com"><i class="fas fa-envelope"></i></a></li>
+        <li><a href="https://www.facebook.com/BelovedChurch.Korea" target="_blank"><i class="fab fa-facebook-f"></i></a></li>
+        <li><a href="https://twitter.com/BelovedChurch_K" target="_blank"><i class="fab fa-twitter"></i></a></li>
+        <li><a href="https://wa.me/254727997388" target="_blank"><i class="fab fa-whatsapp"></i></a></li>
+        <li><a href="https://www.youtube.com/user/gfctvmedia" target="_blank"><i class="fab fa-youtube"></i></a></li>
+      </ul>
+      <small>© <span id="year"></span> Beloved Church Kenya. All rights reserved.</small>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  const dashboardBtn = document.getElementById('dashboardBtn');
+  const uploadBtn = document.getElementById('adminUploadBtn');
+  const logsBtn = document.getElementById('logsBtn');
+  const loginBtn = document.getElementById('loginLogoutBtn');
+  const balanceEl = document.getElementById('balance');
+  const dashboardDiv = document.getElementById('dashboard');
+  const uploadDiv = document.getElementById('upload');
+  const authContainer = document.getElementById('authContainer');
+
+  let isLoggedIn = false;
+  let isAdmin = false;
+  window.balanceInterval = null;
+
+  // -----------------------------
+  // GLOBAL FUNCTIONS
+  // -----------------------------
+  window.showLoginForm = showLoginForm;
+  window.showRegisterForm = showRegisterForm;
+  window.logout = logout;
+  window.loadDashboard = loadDashboard;
+  window.loadUploadContacts = loadUploadContacts;
+  window.loadLogs = loadLogs;
+  window.sendSMS = sendSMS;
+
+  // -----------------------------
+  // INITIALIZE
+  // -----------------------------
+  fetchUserStatus();
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  dashboardBtn.onclick = () => { if (isLoggedIn) loadDashboard(); else alert("Please login to access dashboard"); };
+  logsBtn.onclick = () => { if (isLoggedIn) loadLogs(); else alert("Please login to view SMS logs"); };
+  uploadBtn.onclick = () => { if (isAdmin) loadUploadContacts(); else alert("Only admin can upload contacts"); };
+
+  // ==============================
+  // FETCH USER STATUS
+  // ==============================
+  function fetchUserStatus() {
+    fetch('/user_status')
+      .then(res => res.json())
+      .then(data => {
+        isLoggedIn = data.isLoggedIn;
+        isAdmin = data.isAdmin;
+        setupLoginLogoutButton();
+        setupAdminControls(data.balance);
+        if (isLoggedIn) loadDashboard();
+      })
+      .catch(err => console.error("USER STATUS ERROR:", err));
+  }
+
+  function setupLoginLogoutButton() {
+    if (isLoggedIn) {
+      loginBtn.textContent = 'Logout';
+      loginBtn.onclick = logout;
+    } else {
+      loginBtn.textContent = 'Login';
+      loginBtn.onclick = showLoginForm;
+    }
+  }
+
+  // ==============================
+  // LOGIN / REGISTER
+  // ==============================
+  function showLoginForm() {
+    authContainer.innerHTML = `
+      <h2>Login</h2>
+      <input type="text" id="loginUsername" placeholder="Username">
+      <input type="password" id="loginPassword" placeholder="Password">
+      <input type="text" id="loginRestPin" placeholder="REST PIN (optional)">
+      <button id="loginSubmitBtn">Login</button>
+      <p>Don't have an account? <a href="#" id="showRegisterLink">Register here</a></p>
+      <div id="loginError" style="color:red;"></div>
+    `;
+    document.getElementById('showRegisterLink').onclick = e => { e.preventDefault(); showRegisterForm(); };
+    document.getElementById('loginSubmitBtn').onclick = () => {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const rest_pin = document.getElementById('loginRestPin').value.trim();
+      const loginError = document.getElementById('loginError');
+      if (!username || !password) { loginError.textContent = "Username and password required"; return; }
+
+      fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username, password, rest_pin })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "logged_in") {
+          isLoggedIn = true;
+          isAdmin = data.is_admin;
+          authContainer.innerHTML = '';
+          setupLoginLogoutButton();
+          setupAdminControls(data.balance);
+          loadDashboard();
+        } else loginError.textContent = data.error || "Login failed";
+      })
+      .catch(err => { loginError.textContent = "Login error"; console.error(err); });
+    };
+  }
+
+  function showRegisterForm() {
+    authContainer.innerHTML = `
+      <h2>Register</h2>
+      <input type="text" id="regUsername" placeholder="Username">
+      <input type="password" id="regPassword" placeholder="Password">
+      <input type="text" id="regRestPin" placeholder="REST PIN (optional)">
+      <button id="registerSubmitBtn">Register</button>
+      <p>Already have an account? <a href="#" id="showLoginLink">Login here</a></p>
+      <div id="regError" style="color:red;"></div>
+    `;
+    document.getElementById('showLoginLink').onclick = e => { e.preventDefault(); showLoginForm(); };
+    document.getElementById('registerSubmitBtn').onclick = () => {
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const rest_pin = document.getElementById('regRestPin').value.trim();
+      const regError = document.getElementById('regError');
+      if (!username || !password) { regError.textContent = "Username and password required"; return; }
+
+      fetch('/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username, password, rest_pin })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "Registration successful") {
+          regError.style.color = "green";
+          regError.textContent = "Registration successful! Please login.";
+        } else regError.textContent = data.status || "Registration failed";
+      })
+      .catch(err => { regError.textContent = "Registration error"; console.error(err); });
+    };
+  }
+
+  function logout() {
+    fetch('/logout', { method: 'POST' })
+      .then(res => res.json())
+      .then(() => {
+        isLoggedIn = false;
+        isAdmin = false;
+        uploadBtn.style.display = 'none';
+        balanceEl.style.display = 'none';
+        authContainer.innerHTML = '';
+        setupLoginLogoutButton();
+        dashboardDiv.innerHTML = '';
+        uploadDiv.style.display = 'none';
+      })
+      .catch(err => console.error('Logout error:', err));
+  }
+
+  // ==============================
+  // ADMIN CONTROLS
+  // ==============================
+  function setupAdminControls(balance = 0) {
+  uploadBtn.style.display = 'none';
+  balanceEl.style.display = 'none';
+  document.getElementById('adminUsersSection').style.display = 'none';
+
+  if (isLoggedIn && isAdmin) {
+    uploadBtn.style.display = 'inline-block';
+    balanceEl.style.display = 'inline-block';
+
+    // Immediately fetch live balance instead of using old balance
+    fetch('/user_status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.balance !== undefined) {
+          balanceEl.textContent = `Balance: KES ${data.balance}`;
+        } else {
+          balanceEl.textContent = `Balance: KES 0`;
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching initial balance:', err);
+        balanceEl.textContent = `Balance: KES 0`;
+      });
+
+    // Clear previous interval
+    if (window.balanceInterval) clearInterval(window.balanceInterval);
+
+    // Update balance every 10 seconds
+    window.balanceInterval = setInterval(() => {
+      fetch('/user_status')
+        .then(res => res.json())
+        .then(data => {
+          if (data.balance !== undefined) {
+            balanceEl.textContent = `Balance: KES ${data.balance}`;
+          }
+        })
+        .catch(err => console.error('Error updating balance:', err));
+    }, 10000);
+
+    loadUsers(); // Populate users table
+  }
+}
+
+
+  function loadUsers() {
+  fetch("/get_all_users")
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.querySelector("#usersTable tbody");
+      tbody.innerHTML = "";
+
+      data.users.forEach(user => {
+        const tr = document.createElement("tr");
+        let actionHTML = "";
+
+        // ==========================
+        // PENDING USERS
+        // ==========================
+        if (user.status === "pending") {
+          actionHTML = `
+            <button onclick="adminAction(${user.id}, 'approve')">Approve</button>
+            <button onclick="adminAction(${user.id}, 'reject')">Reject</button>
+          `;
+        }
+
+        // ==========================
+        // APPROVED USERS
+        // ==========================
+        else if (user.status === "approved") {
+
+          // DEFAULT: admin protected
+          if (user.is_admin === true || user.username === "admin") {
+            actionHTML = `<span style="color:#777;">--</span>`;
+          } else {
+            actionHTML = `
+              <button onclick="adminAction(${user.id}, 'disable')">Disable</button>
+            `;
+          }
+        }
+
+        // ==========================
+        // DISABLED USERS
+        // ==========================
+        else if (user.status === "disabled") {
+          actionHTML = `
+            <button onclick="enableUser(${user.id})">Enable</button>
+          `;
+        }
+
+        // ==========================
+        // ROW OUTPUT
+        // ==========================
+        tr.innerHTML = `
+          <td>${user.username}</td>
+          <td>${user.status}</td>
+          <td>${actionHTML}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("adminUsersSection").style.display = "block";
+    })
+    .catch(err => console.error("Failed to load users:", err));
+}
+
+
+
+// -------------------------
+// ADMIN ACTIONS
+// -------------------------
+window.adminAction = function(userId, action) {
+  let url = "";
+
+  if (action === "approve") url = "/approve_user";
+  else if (action === "reject") url = "/reject_user";
+  else if (action === "disable") url = "/disable_user";
+  else return;
+
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.status || "Action done");
+    loadUsers();
+  })
+  .catch(err => console.error("Admin action failed:", err));
+};
+
+
+// -------------------------
+// ENABLE DISABLED USER
+// -------------------------
+// make globally accessible for inline onclick handlers
+window.enableUser = function(userId) {
+  if (!userId) {
+    console.error("enableUser called without userId");
+    return;
+  }
+
+  // ensure it's a number (optional)
+  userId = Number(userId);
+
+  fetch("/enable_user", {
+    method: "POST",
+    credentials: "same-origin",              // ensure cookies (session) are sent
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId })
+  })
+  .then(response => {
+    // helpful debug
+    if (!response.ok) {
+      // try to parse JSON error body
+      return response.json().then(err => Promise.reject({ status: response.status, body: err }));
+    }
+    return response.json();
+  })
+  .then(data => {
+    // success
+    alert(data.status || "User enabled");
+    // refresh the table and UI
+    if (typeof loadUsers === "function") loadUsers();
+    else if (typeof loadUsers === "undefined") console.warn("loadUsers not found");
+  })
+  .catch(err => {
+    // show friendly message and log details
+    console.error("Enable user failed:", err);
+    if (err && err.body && err.body.status) {
+      alert("Error: " + err.body.status);
+    } else if (err && err.status) {
+      alert("Request failed (HTTP " + err.status + "). Check console for details.");
+    } else {
+      alert("Enable failed. See console.");
+    }
+  });
+};
+
+  // ==============================
+  // DASHBOARD / SMS / UPLOAD / LOGS
+  // ==============================
+  function loadDashboard() {
+    dashboardDiv.style.display = 'block';
+    uploadDiv.style.display = 'none';
+    dashboardDiv.innerHTML = `
+      <h2>Send Bulk SMS</h2>
+      <div class="tabs">
+        <button class="tab-btn selected" onclick="loadCategory('Regional Overseer', this)">Regional Overseers</button>
+        <button class="tab-btn" onclick="loadCategory('Subregional Pastor', this)">Subregional Pastors</button>
+        <button class="tab-btn" onclick="loadCategory('Pastor', this)">Pastors</button>
+      </div>
+      <div id="recipientsContainer"></div>
+      <textarea id="message" placeholder="Type message..."></textarea>
+      <button onclick="sendSMS()">Send SMS</button>
+    `;
+    loadCategory('Regional Overseer', dashboardDiv.querySelector('.tab-btn.selected'));
+  }
+
+  window.loadCategory = function(category, el) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+    fetch(`/get_contacts?category=${encodeURIComponent(category)}`)
+      .then(res => res.json())
+      .then(data => renderContacts(category, data.contacts));
+  };
+
+  function renderContacts(category, contacts) {
+    const container = document.getElementById('recipientsContainer');
+    container.innerHTML = '';
+    const grouped = {};
+    contacts.forEach(c => {
+      if (!grouped[c.region]) grouped[c.region] = {};
+      if (!grouped[c.region][c.subregion]) grouped[c.region][c.subregion] = [];
+      grouped[c.region][c.subregion].push(c);
+    });
+
+    for (const region in grouped) {
+      const regionDiv = document.createElement('div');
+      const regionHeader = document.createElement('strong');
+      regionHeader.textContent = region;
+      regionDiv.appendChild(regionHeader);
+
+      for (const subregion in grouped[region]) {
+        const subDiv = document.createElement('div');
+        subDiv.style.marginLeft = '20px';
+        const subHeader = document.createElement('em');
+        subHeader.textContent = subregion;
+        subDiv.appendChild(subHeader);
+
+        grouped[region][subregion].forEach(c => {
+          const label = document.createElement('label');
+          label.style.display = 'block';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.classList.add('contact-checkbox');
+          cb.value = c.phone;
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode(` ${c.name} (${c.phone})`));
+          subDiv.appendChild(label);
+        });
+
+        regionDiv.appendChild(subDiv);
+      }
+      container.appendChild(regionDiv);
+    }
+  }
+
+  function sendSMS() {
+    const message = document.getElementById('message').value;
+    const recipients = Array.from(document.querySelectorAll('#recipientsContainer input.contact-checkbox:checked')).map(cb => cb.value);
+    if (!message || recipients.length === 0) { alert("Message and recipients required"); return; }
+
+    fetch('/send_sms', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ message, recipients })
+    }).then(res => res.json())
+      .then(data => { alert(data.status); document.getElementById('message').value = ''; });
+  }
+
+  function loadUploadContacts() {
+    dashboardDiv.style.display = 'none';
+    uploadDiv.style.display = 'block';
+    uploadDiv.innerHTML = `
+      <h2>Upload Contacts</h2>
+      <input type="file" id="uploadFile">
+      <button onclick="uploadContacts()">Upload</button>
+      <div id="uploadStatus"></div>
+    `;
+  }
+
+  window.uploadContacts = function() {
+    const file = document.getElementById('uploadFile').files[0];
+    if (!file) { alert("Please select a file"); return; }
+    const formData = new FormData();
+    formData.append('file', file);
+    fetch('/upload_contacts', { method: 'POST', body: formData })
+      .then(res => res.json())
+      .then(data => { document.getElementById('uploadStatus').innerText = data.status; });
+  };
+
+  function loadLogs() {
+    dashboardDiv.style.display = 'block';
+    uploadDiv.style.display = 'none';
+    dashboardDiv.innerHTML = '<h2>SMS Logs</h2>';
+    fetch('/logs')
+      .then(res => res.json())
+      .then(data => {
+        data.logs.forEach(log => {
+          const div = document.createElement('div');
+          div.innerText = `[${log.sent_at}] ${log.category}: ${log.message} → ${log.recipients}`;
+          dashboardDiv.appendChild(div);
+        });
+      });
+  }
+
+});
+</script>
+
+</body>
+</html>

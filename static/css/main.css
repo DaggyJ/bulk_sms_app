@@ -1,0 +1,286 @@
+/* ------------------------
+   Global Reset
+------------------------ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f9f9f9, #e0f7ff);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  align-items: center;
+}
+
+/* ------------------------
+   Navbar
+------------------------ */
+.navbar {
+  width: 100%;
+  background: #d63384;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  color: white;
+  font-weight: bold;
+  flex-wrap: wrap;
+}
+
+.navbar-left, .navbar-right, .navbar-center {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-left, .navbar-right {
+  gap: 10px;
+}
+
+.navbar-center {
+  flex-direction: column;
+  text-align: center;
+}
+
+.navbar-center img {
+  height: 40px;
+}
+
+/* Navbar buttons */
+.navbar-left button,
+.navbar-right button {
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.navbar-left button:hover,
+.navbar-right button:hover {
+  background: white;
+  color: #d63384;
+}
+
+/* Admin-only balance & Upload */
+#balance,
+#adminUploadBtn {
+  display: none;
+  background: #fff;
+  color: #d63384;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: default;
+  transition: all 0.2s;
+}
+
+#balance:hover,
+#adminUploadBtn:hover {
+  background: #e0a800;
+  color: white;
+  cursor: pointer;
+}
+
+/* ------------------------
+   Container Columns
+------------------------ */
+.container {
+  display: flex;
+  width: 95%;
+  max-width: 1200px;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.left-col {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+/* ------------------------
+   Tabs
+------------------------ */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: #000;
+}
+
+/* Category Colors */
+.tab-btn:nth-child(1) { background-color: #d8b4fe; } /* Regional */
+.tab-btn:nth-child(2) { background-color: #93c5fd; } /* Subregional */
+.tab-btn:nth-child(3) { background-color: #d1d5db; } /* Pastor */
+
+/* Hover & Selected */
+.tab-btn:hover { opacity: 0.85; transform: translateY(-2px); }
+.tab-btn.selected {
+  border: 2px solid #d63384;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  color: #000;
+}
+
+/* ------------------------
+   Message Box & Send Button
+------------------------ */
+textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+textarea:focus { border-color: #d63384; outline: none; }
+
+button[onclick="sendSMS()"] {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 0;
+  width: 100%;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button[onclick="sendSMS()"]:hover { background-color: #218838; transform: translateY(-2px); }
+
+button[onclick="sendSMS()"].sent {
+  background-color: #0d6efd;
+  color: white;
+  cursor: default;
+  transform: none;
+}
+
+/* ------------------------
+   Footer
+------------------------ */
+footer {
+  width: 100%;
+  background: #2d6cdf;
+  color: white;
+  padding: 20px 40px;
+  margin-top: 30px;
+  border-radius: 8px 8px 0 0;
+  font-size: 0.9rem;
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.footer-left, .footer-right { flex: 1; min-width: 250px; }
+
+.footer-left address { font-style: normal; line-height: 1.6; }
+
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.footer-right ul.sns { list-style: none; display: flex; gap: 10px; padding: 0; margin: 0 0 10px 0; }
+
+.footer-right ul.sns li a { color: white; font-size: 1.2rem; text-decoration: none; transition: opacity 0.2s; }
+
+.footer-right ul.sns li a:hover { opacity: 0.7; }
+
+.footer-right small { text-align: right; display: block; }
+
+/* ------------------------
+   Responsive
+------------------------ */
+@media (max-width: 900px) {
+  .container { flex-direction: column; }
+  .left-col { width: 100%; }
+  .navbar { flex-direction: column; gap: 10px; text-align: center; }
+  .navbar-left, .navbar-right, .navbar-center { justify-content: center; }
+  .footer-container { flex-direction: column; align-items: center; text-align: center; }
+  .footer-right { align-items: center; }
+  .footer-right small { text-align: center; }
+}
+
+@media (max-width: 480px) {
+  .tab-btn { font-size: 0.9rem; }
+  button[onclick="sendSMS()"] { font-size: 1rem; }
+  .navbar-center img { height: 35px; }
+}
+
+
+/* ===========================
+   Users Table
+=========================== */
+#usersTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+#usersTable th, #usersTable td {
+  padding: 8px;
+  text-align: left;
+  border: 1px solid #ccc;
+}
+
+#usersTable th {
+  background-color: #007BFF;
+  color: #fff;
+}
+
+#usersTable button {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+}
+
+
+/* ===========================
+   Responsive
+=========================== */
+@media (max-width: 768px) {
+  .tabs {
+    flex-direction: column;
+  }
+
+  #recipientsContainer {
+    max-height: 250px;
+  }
+
+  button {
+    width: 100%;
+  }
+}

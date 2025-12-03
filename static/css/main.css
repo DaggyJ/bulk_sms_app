@@ -46,9 +46,33 @@ body {
   text-align: center;
 }
 
-.navbar-center img {
-  height: 40px;
+.navbar-center {
+    text-align: center; /* center the logo */
 }
+
+.logo {
+    width: 80px;        /* default size */
+    height: 80px;       /* default size */
+    border-radius: 50%; /* makes it circular */
+    object-fit: cover;  /* keeps aspect ratio and fills the circle */
+    transition: width 0.3s, height 0.3s; /* smooth resizing */
+}
+
+/* Make it responsive */
+@media (max-width: 768px) {
+    .logo {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        width: 50px;
+        height: 50px;
+    }
+}
+
 
 /* Navbar buttons */
 .navbar-left button,

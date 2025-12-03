@@ -6,7 +6,7 @@ from utils import send_bulk_sms, get_celcom_balance
 from werkzeug.security import check_password_hash, generate_password_hash
 from openpyxl import load_workbook
 import os
-from sqlalchemy import func
+from sqlalchemy import func  
 
 # -------------------------
 # APP INITIALIZATION
@@ -67,7 +67,7 @@ def login():
         return jsonify({"error": "Your account has been disabled"}), 403
     if rest_pin and str(user.rest_pin) != str(rest_pin):
         return jsonify({"error": "Invalid REST PIN"}), 401
-
+    
     # Persist session
     session.permanent = True
     session['user_id'] = user.id

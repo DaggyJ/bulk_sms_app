@@ -27,7 +27,13 @@ EMAIL_PASS = os.getenv("EMAIL_PASS")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
-# Database
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(BASE_DIR, "instance", "contacts.db")
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+
+# Ensure instance folder exists
+if not os.path.exists(INSTANCE_DIR):
+    os.makedirs(INSTANCE_DIR)
+
+SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(INSTANCE_DIR, "contacts.db")
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+
